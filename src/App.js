@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   makeStyles,
   Grid,
@@ -21,24 +21,62 @@ const useStyle = makeStyles((theme) => ({
   },
 }));
 
+const setupPaymentSession = () => {
+  window.PaymentSession.configure({
+      fields: {
+          // ATTACH HOSTED FIELDS IDS TO YOUR PAYMENT PAGE FOR A CREDIT CARD
+          card: {
+              cardNumber: "cardNumber",
+              securityCode: "cardCVC",
+              expiryMonth: "cardMonth",
+              expiryYear: "cardYear"
+          }
+      },
+      callbacks: {
+          initialized: function (err, response) {
+              console.log("init....");
+              console.log(err, response);
+              console.log("/init.....");
+              // HANDLE INITIALIZATION RESPONSE
+          },
+          formSessionUpdate: function (err,response) {
+              console.log("update callback.....");
+              console.log(err,response);
+              console.log("/update callback....");
+
+              // HANDLE RESPONSE FOR UPDATE SESSION
+              if (response.statusCode) {
+                  if (200 === response.statusCode) {
+                      console.log("Session updated with data: " + response.data.sessionId);
+                  } else if (201 === response.statusCode) {
+                      console.log("Session update failed with field errors.");
+
+                      if (response.message) {
+                          var field = response.message.indexOf('valid')
+                          field = response.message.slice(field + 5, response.message.length);
+                          console.log(field + " is invalid or missing.");
+                      }
+                  } else {
+                      console.log("Session update failed: " + response);
+                  }
+              }
+          }
+      }
+  })
+}
+
 const App = (props) => {
   const classes = useStyle(props);
-  const [cardDetails, setCardDetails] = React.useState({
-    cvc: "",
-    expiry: "",
-    year: "",
-    focus: "",
-    name: "",
-    number: "",
-  });
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    const cardsCopy = { ...cardDetails };
-    cardsCopy[name] = value;
+  useEffect(() => {
+    setupPaymentSession()
+  }, [])
 
-    setCardDetails(cardsCopy);
-  };
+  const updateSession = (e) => {
+    e.preventDefault()
+
+    this.PaymentSession.updateSessionFromForm()
+  }
 
   return (
     <div>
@@ -52,7 +90,6 @@ const App = (props) => {
         <Grid container item xs={12} sm={10} className={classes.cards}>
           <form style={{ width: "50%" }}>
             <TextField
-              onChange={handleInputChange}
               value={5123456789012346}
               label="Card Number"
               variant="outlined"
@@ -60,50 +97,61 @@ const App = (props) => {
               fullWidth
               name="number"
               id="cardNumber"
+              InputProps={{
+                readOnly: true,
+              }}
               disabled
             />
             <TextField
-              onChange={handleInputChange}
               value={"Abhishek Kumar"}
               name="name"
               label="Card Holder Name"
               variant="outlined"
               type="text"
-              fullWidth
               style={{ marginTop: "0.5rem" }}
+              InputProps={{
+                readOnly: true,
+              }}
+              fullWidth
             />
             <Typography
               component="div"
               style={{ display: "flex", gap: "1rem", marginTop: "0.5rem" }}
             >
               <TextField
-                onChange={handleInputChange}
                 value={"May"}
                 label="Month"
                 variant="outlined"
                 type="text"
-                fullWidth
                 name="expiry"
                 id="cardMonth"
+                InputProps={{
+                  readOnly: true,
+                }}
+                fullWidth
               />
               <TextField
-                onChange={handleInputChange}
                 value={2021}
                 label="Year"
                 variant="outlined"
                 type="text"
-                fullWidth
                 name="year"
                 id="cardYear"
+                InputProps={{
+                  readOnly: true,
+                }}
+                fullWidth
               />
               <TextField
-                onChange={handleInputChange}
                 value={123}
                 name="cvc"
                 label="CVV/CVC"
                 variant="outlined"
                 type="number"
                 id="cardCVC"
+                InputProps={{
+                  readOnly: true,
+                }}
                 fullWidth
                 disabled
               />
@@ -112,7 +160,7 @@ const App = (props) => {
               <Button
                 variant="contained"
                 color="primary"
-                onClick={() => window.pay()}
+                onClick={updateSession}
                 style={{ textTransform: "capitalize" }}
               >
                 {`Make Payment of ${500} EGP`}
